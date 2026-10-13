@@ -1,0 +1,53 @@
+Name: Windows Cloud PC - Anydesk (Optimized)
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Start Building...
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Downloading & Installing Essentials
+        run: |
+          Invoke-WebRequest -Uri "https://download.anydesk.com/AnyDesk.exe" -OutFile "AnyDesk.exe"
+          Start-Process -FilePath "AnyDesk.exe" -ArgumentList "--install `"$env:ProgramFiles (x86)\AnyDesk`" --start-with-win --silent" -Wait
+          Start-Sleep -Seconds 5
+
+      - name: Configure Password
+        run: |
+          $anydeskPath = "${env:ProgramFiles(x86)}\AnyDesk\AnyDesk.exe"
+          cmd.exe /c "echo Senha123456| `"$anydeskPath`" --set-password"
+          Write-Host "Senha configurada."
+
+      - name: Get AnyDesk ID
+        id: get_id
+        run: |
+          $anydeskPath = "${env:ProgramFiles(x86)}\AnyDesk\AnyDesk.exe"
+          # Captura o ID gerado pelo AnyDesk
+          $anydeskId = &$anydeskPath --get-id
+          Write-Host "ID obtido: $anydeskId"
+          
+          # Salva o ID na variável de ambiente do GitHub Actions para usar no nome do próximo passo
+          echo "ANYDESK_ID=$anydeskId" >> $env:GITHUB_ENV
+
+      - name: 'AnyDesk ID: ${{ env.ANYDESK_ID }}'
+        run: |
+          Write-Host "O número do seu AnyDesk é: ${{ env.ANYDESK_ID }}"
+          Write-Host "A senha de acesso é: Senha123456"
+
+      - name: Keep Runner Alive
+        run: |
+          Write-Host "Sessão iniciada. O runner continuará ativo."
+          for ($i = 1; $i -le 360; $i++) {
+            Write-Host "[Ativo] Minuto $i de 360..."
+            Start-Sleep -Seconds 60
+          }
+
+      - name: Clean Up Temporary Files
+        if: always()
+        run: |
+          Remove-Item AnyDesk.exe -ErrorAction SilentlyContinue -Force
+          Write-Host "Limpeza concluída."
+          
